@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+        content="AI-Powered Text Summarizer for Research Papers — Upload a PDF and get an instant structured summary covering core problem, methodology, key findings, and limitations." />
+  <title>ResearchLens · AI Paper Summarizer</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- ░░ HEADER ░░ -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <div class="logo" aria-label="ResearchLens home">
+        <span class="logo-icon" aria-hidden="true">⬡</span>
+        <span class="logo-text">Research<strong>Lens</strong></span>
+      </div>
+      <nav class="header-meta" aria-label="App status">
+        <span id="api-status-badge" class="badge badge--checking" role="status" aria-live="polite">
+          <span class="badge-dot"></span> Checking API…
+        </span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ░░ HERO ░░ -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <h1 id="hero-heading" class="hero-title">
+      AI-Powered<br />
+      <span class="gradient-text">Research Paper Summarizer</span>
+    </h1>
+    <p class="hero-subtitle">
+      Upload any research paper PDF and receive a structured, four-section
+      summary in seconds — powered by <strong>LLaMA 3.1</strong> via Groq.
+    </p>
+  </section>
+
+  <!-- ░░ MAIN ░░ -->
+  <main class="main-container" id="main-content">
+
+    <!-- ── Upload Card ── -->
+    <section class="card upload-card" aria-labelledby="upload-heading">
+      <h2 id="upload-heading" class="card-title">
+        <span class="card-title-icon" aria-hidden="true">📄</span>
+        Upload Research Paper
+      </h2>
+
+      <!-- Drop Zone -->
+      <div
+        id="drop-zone"
+        class="drop-zone"
+        role="button"
+        tabindex="0"
+        aria-label="Click or drag and drop a PDF file here"
+        aria-describedby="drop-zone-hint"
+      >
+        <div class="drop-zone-inner">
+          <div class="drop-icon" aria-hidden="true">
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none"
+                 xmlns="http://www.w3.org/2000/svg">
+              <rect width="52" height="52" rx="16" fill="url(#iconGrad)" />
+              <path d="M26 34V20M26 20L21 25M26 20L31 25" stroke="white"
+                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="16" y="36" width="20" height="3" rx="1.5" fill="white" opacity="0.7"/>
+              <defs>
+                <linearGradient id="iconGrad" x1="0" y1="0" x2="52" y2="52"
+                                gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#6366f1"/>
+                  <stop offset="1" stop-color="#8b5cf6"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <p class="drop-primary">Drag &amp; drop your PDF here</p>
+          <p class="drop-secondary" id="drop-zone-hint">or click to browse files</p>
+          <p class="drop-constraints">PDF only · Max 10 MB</p>
+        </div>
+        <input
+          id="file-input"
+          type="file"
+          accept=".pdf,application/pdf"
+          aria-hidden="true"
+          tabindex="-1"
+        />
+      </div>
+
+      <!-- File Info -->
+      <div id="file-info" class="file-info" hidden aria-live="polite">
+        <span class="file-info-icon" aria-hidden="true">📎</span>
+        <div class="file-info-text">
+          <span id="file-name" class="file-name"></span>
+          <span id="file-size" class="file-size"></span>
+        </div>
+        <button id="clear-file-btn" class="btn-icon" aria-label="Remove selected file" title="Remove file">
+          ✕
+        </button>
+      </div>
+
+      <!-- Error Banner -->
+      <div id="error-banner" class="error-banner" hidden role="alert" aria-live="assertive">
+        <span class="error-banner-icon" aria-hidden="true">⚠</span>
+        <span id="error-message"></span>
+        <button id="dismiss-error-btn" class="btn-icon" aria-label="Dismiss error">✕</button>
+      </div>
+
+      <!-- Action Button -->
+      <button
+        id="summarise-btn"
+        class="btn btn--primary btn--lg"
+        disabled
+        aria-disabled="true"
+      >
+        <span id="btn-label">Summarise Paper</span>
+        <span id="btn-spinner" class="spinner" hidden aria-hidden="true"></span>
+      </button>
+    </section>
+
+    <!-- ── Results Section ── -->
+    <section
+      id="results-section"
+      class="results-section"
+      hidden
+      aria-labelledby="results-heading"
+      aria-live="polite"
+    >
+      <!-- Meta Bar -->
+      <div class="results-meta-bar">
+        <div class="results-meta-info">
+          <h2 id="results-heading" class="results-title">Summary Results</h2>
+          <div class="results-meta-pills">
+            <span id="meta-filename" class="pill pill--file"></span>
+            <span id="meta-pages" class="pill pill--info"></span>
+            <span id="meta-time" class="pill pill--time"></span>
+            <span id="meta-mode" class="pill pill--mode"></span>
+          </div>
+        </div>
+        <div class="results-actions">
+          <button id="copy-btn" class="btn btn--secondary" aria-label="Copy summary as Markdown">
+            <span aria-hidden="true">⎘</span> Copy Markdown
+          </button>
+          <button id="download-btn" class="btn btn--secondary" aria-label="Download summary as text file">
+            <span aria-hidden="true">↓</span> Download .txt
+          </button>
+          <button id="new-upload-btn" class="btn btn--ghost" aria-label="Start a new upload">
+            ↺ New Upload
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Cards Grid -->
+      <div class="summary-grid" id="summary-grid" role="list">
+
+        <!-- Card 1: Core Problem -->
+        <article class="summary-card summary-card--problem" role="listitem"
+                 aria-labelledby="card-problem-title">
+          <div class="summary-card-header">
+            <span class="summary-card-icon" aria-hidden="true">🔍</span>
+            <h3 id="card-problem-title" class="summary-card-title">Core Problem</h3>
+          </div>
+          <p id="card-problem-body" class="summary-card-body"></p>
+        </article>
+
+        <!-- Card 2: Methodology -->
+        <article class="summary-card summary-card--method" role="listitem"
+                 aria-labelledby="card-method-title">
+          <div class="summary-card-header">
+            <span class="summary-card-icon" aria-hidden="true">⚙</span>
+            <h3 id="card-method-title" class="summary-card-title">Methodology</h3>
+          </div>
+          <p id="card-method-body" class="summary-card-body"></p>
+        </article>
+
+        <!-- Card 3: Key Findings -->
+        <article class="summary-card summary-card--findings" role="listitem"
+                 aria-labelledby="card-findings-title">
+          <div class="summary-card-header">
+            <span class="summary-card-icon" aria-hidden="true">✨</span>
+            <h3 id="card-findings-title" class="summary-card-title">Key Findings</h3>
+          </div>
+          <p id="card-findings-body" class="summary-card-body"></p>
+        </article>
+
+        <!-- Card 4: Limitations -->
+        <article class="summary-card summary-card--limits" role="listitem"
+                 aria-labelledby="card-limits-title">
+          <div class="summary-card-header">
+            <span class="summary-card-icon" aria-hidden="true">⚑</span>
+            <h3 id="card-limits-title" class="summary-card-title">Limitations</h3>
+          </div>
+          <p id="card-limits-body" class="summary-card-body"></p>
+        </article>
+
+      </div><!-- /.summary-grid -->
+    </section><!-- /#results-section -->
+
+  </main>
+
+  <!-- ░░ FOOTER ░░ -->
+  <footer class="site-footer" role="contentinfo">
+    <p>
+      B.Tech CSE Mini-Project &mdash; AI-Powered Text Summarizer for Research Papers
+      &nbsp;·&nbsp;
+      <span class="footer-tech">FastAPI · pypdf · LLaMA 3.1 · Groq</span>
+    </p>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
