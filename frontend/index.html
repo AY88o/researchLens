@@ -4,29 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-        content="AI-Powered Text Summarizer for Research Papers — Upload a PDF and get an instant structured summary covering core problem, methodology, key findings, and limitations." />
-  <title>ResearchLens · AI Paper Summarizer</title>
+        content="ResearchLens — Distil any research paper into a precise, structured summary. Upload a PDF and receive instant insight across problem, methodology, findings, and limitations." />
+  <title>ResearchLens · Intelligent Paper Analysis</title>
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
+
   <!-- ░░ HEADER ░░ -->
   <header class="site-header" role="banner">
     <div class="header-inner">
       <div class="logo" aria-label="ResearchLens home">
-        <span class="logo-icon" aria-hidden="true">⬡</span>
+        <span class="logo-mark" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <rect width="26" height="26" rx="7" fill="#BA1200"/>
+            <path d="M7 13h12M13 7v12" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </span>
         <span class="logo-text">Research<strong>Lens</strong></span>
       </div>
-      <nav class="header-meta" aria-label="App status">
+      <nav class="header-right" aria-label="App status">
         <span id="api-status-badge" class="badge badge--checking" role="status" aria-live="polite">
           <span class="badge-dot"></span> Checking API…
         </span>
@@ -34,188 +35,226 @@
     </div>
   </header>
 
-  <!-- ░░ HERO ░░ -->
-  <section class="hero" aria-labelledby="hero-heading">
-    <h1 id="hero-heading" class="hero-title">
-      AI-Powered<br />
-      <span class="gradient-text">Research Paper Summarizer</span>
-    </h1>
-    <p class="hero-subtitle">
-      Upload any research paper PDF and receive a structured, four-section
-      summary in seconds — powered by <strong>LLaMA 3.1</strong> via Groq.
-    </p>
-  </section>
+  <!-- ░░ MAIN — flex column, fills 100vh minus header ░░ -->
+  <main class="app-main" id="main-content">
 
-  <!-- ░░ MAIN ░░ -->
-  <main class="main-container" id="main-content">
-
-    <!-- ── Upload Card ── -->
-    <section class="card upload-card" aria-labelledby="upload-heading">
-      <h2 id="upload-heading" class="card-title">
-        <span class="card-title-icon" aria-hidden="true">📄</span>
-        Upload Research Paper
-      </h2>
-
-      <!-- Drop Zone -->
-      <div
-        id="drop-zone"
-        class="drop-zone"
-        role="button"
-        tabindex="0"
-        aria-label="Click or drag and drop a PDF file here"
-        aria-describedby="drop-zone-hint"
-      >
-        <div class="drop-zone-inner">
-          <div class="drop-icon" aria-hidden="true">
-            <svg width="52" height="52" viewBox="0 0 52 52" fill="none"
-                 xmlns="http://www.w3.org/2000/svg">
-              <rect width="52" height="52" rx="16" fill="url(#iconGrad)" />
-              <path d="M26 34V20M26 20L21 25M26 20L31 25" stroke="white"
-                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="16" y="36" width="20" height="3" rx="1.5" fill="white" opacity="0.7"/>
-              <defs>
-                <linearGradient id="iconGrad" x1="0" y1="0" x2="52" y2="52"
-                                gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#6366f1"/>
-                  <stop offset="1" stop-color="#8b5cf6"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <p class="drop-primary">Drag &amp; drop your PDF here</p>
-          <p class="drop-secondary" id="drop-zone-hint">or click to browse files</p>
-          <p class="drop-constraints">PDF only · Max 10 MB</p>
-        </div>
-        <input
-          id="file-input"
-          type="file"
-          accept=".pdf,application/pdf"
-          aria-hidden="true"
-          tabindex="-1"
-        />
-      </div>
-
-      <!-- File Info -->
-      <div id="file-info" class="file-info" hidden aria-live="polite">
-        <span class="file-info-icon" aria-hidden="true">📎</span>
-        <div class="file-info-text">
-          <span id="file-name" class="file-name"></span>
-          <span id="file-size" class="file-size"></span>
-        </div>
-        <button id="clear-file-btn" class="btn-icon" aria-label="Remove selected file" title="Remove file">
-          ✕
-        </button>
-      </div>
-
-      <!-- Error Banner -->
-      <div id="error-banner" class="error-banner" hidden role="alert" aria-live="assertive">
-        <span class="error-banner-icon" aria-hidden="true">⚠</span>
-        <span id="error-message"></span>
-        <button id="dismiss-error-btn" class="btn-icon" aria-label="Dismiss error">✕</button>
-      </div>
-
-      <!-- Action Button -->
-      <button
-        id="summarise-btn"
-        class="btn btn--primary btn--lg"
-        disabled
-        aria-disabled="true"
-      >
-        <span id="btn-label">Summarise Paper</span>
-        <span id="btn-spinner" class="spinner" hidden aria-hidden="true"></span>
-      </button>
-    </section>
-
-    <!-- ── Results Section ── -->
+    <!-- ── RESULTS VIEW (shown first in DOM → sits above upload strip) ── -->
     <section
+      class="results-view"
       id="results-section"
-      class="results-section"
       hidden
       aria-labelledby="results-heading"
       aria-live="polite"
     >
-      <!-- Meta Bar -->
-      <div class="results-meta-bar">
-        <div class="results-meta-info">
-          <h2 id="results-heading" class="results-title">Summary Results</h2>
-          <div class="results-meta-pills">
-            <span id="meta-filename" class="pill pill--file"></span>
-            <span id="meta-pages" class="pill pill--info"></span>
-            <span id="meta-time" class="pill pill--time"></span>
-            <span id="meta-mode" class="pill pill--mode"></span>
+      <!-- Results top bar -->
+      <div class="results-bar">
+        <div class="results-meta">
+          <h2 id="results-heading" class="results-title">Analysis Complete</h2>
+          <div class="results-pills">
+            <span id="meta-filename" class="rpill rpill--file"></span>
+            <span id="meta-pages"    class="rpill rpill--info"></span>
+            <span id="meta-time"     class="rpill rpill--time"></span>
+            <span id="meta-mode"     class="rpill"></span>
           </div>
         </div>
         <div class="results-actions">
-          <button id="copy-btn" class="btn btn--secondary" aria-label="Copy summary as Markdown">
-            <span aria-hidden="true">⎘</span> Copy Markdown
+          <button id="copy-btn" class="btn-ghost" aria-label="Copy summary as Markdown">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Copy MD
           </button>
-          <button id="download-btn" class="btn btn--secondary" aria-label="Download summary as text file">
-            <span aria-hidden="true">↓</span> Download .txt
+          <button id="download-btn" class="btn-ghost" aria-label="Download summary as .txt">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Download
           </button>
-          <button id="new-upload-btn" class="btn btn--ghost" aria-label="Start a new upload">
-            ↺ New Upload
+          <button id="new-upload-btn" class="btn-ghost btn-ghost--ember" aria-label="New upload">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            New Upload
           </button>
         </div>
       </div>
 
-      <!-- Summary Cards Grid -->
-      <div class="summary-grid" id="summary-grid" role="list">
+      <!-- ── NODE DIAGRAM ── -->
+      <div class="node-diagram" id="node-diagram">
+        <!-- SVG arrow overlay (drawn by JS) -->
+        <svg class="node-svg" id="node-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"></svg>
 
-        <!-- Card 1: Core Problem -->
-        <article class="summary-card summary-card--problem" role="listitem"
-                 aria-labelledby="card-problem-title">
-          <div class="summary-card-header">
-            <span class="summary-card-icon" aria-hidden="true">🔍</span>
-            <h3 id="card-problem-title" class="summary-card-title">Core Problem</h3>
-          </div>
-          <p id="card-problem-body" class="summary-card-body"></p>
-        </article>
+        <!-- 2×2 grid of node cards -->
+        <div class="node-grid" id="node-grid" role="list">
 
-        <!-- Card 2: Methodology -->
-        <article class="summary-card summary-card--method" role="listitem"
-                 aria-labelledby="card-method-title">
-          <div class="summary-card-header">
-            <span class="summary-card-icon" aria-hidden="true">⚙</span>
-            <h3 id="card-method-title" class="summary-card-title">Methodology</h3>
-          </div>
-          <p id="card-method-body" class="summary-card-body"></p>
-        </article>
+          <!-- Node 01 — Core Problem -->
+          <article class="node-card node-card--problem" id="card-problem"
+                   role="listitem" aria-labelledby="card-problem-title">
+            <div class="nc-header">
+              <span class="nc-num" aria-hidden="true">01</span>
+              <h3 id="card-problem-title" class="nc-title">Core Problem</h3>
+            </div>
+            <div class="nc-body-wrap">
+              <p id="card-problem-body" class="nc-body"></p>
+            </div>
+          </article>
 
-        <!-- Card 3: Key Findings -->
-        <article class="summary-card summary-card--findings" role="listitem"
-                 aria-labelledby="card-findings-title">
-          <div class="summary-card-header">
-            <span class="summary-card-icon" aria-hidden="true">✨</span>
-            <h3 id="card-findings-title" class="summary-card-title">Key Findings</h3>
-          </div>
-          <p id="card-findings-body" class="summary-card-body"></p>
-        </article>
+          <!-- Node 02 — Methodology -->
+          <article class="node-card node-card--method" id="card-method"
+                   role="listitem" aria-labelledby="card-method-title">
+            <div class="nc-header">
+              <span class="nc-num" aria-hidden="true">02</span>
+              <h3 id="card-method-title" class="nc-title">Methodology</h3>
+            </div>
+            <div class="nc-body-wrap">
+              <p id="card-method-body" class="nc-body"></p>
+            </div>
+          </article>
 
-        <!-- Card 4: Limitations -->
-        <article class="summary-card summary-card--limits" role="listitem"
-                 aria-labelledby="card-limits-title">
-          <div class="summary-card-header">
-            <span class="summary-card-icon" aria-hidden="true">⚑</span>
-            <h3 id="card-limits-title" class="summary-card-title">Limitations</h3>
-          </div>
-          <p id="card-limits-body" class="summary-card-body"></p>
-        </article>
+          <!-- Node 03 — Key Findings -->
+          <article class="node-card node-card--findings" id="card-findings"
+                   role="listitem" aria-labelledby="card-findings-title">
+            <div class="nc-header">
+              <span class="nc-num" aria-hidden="true">03</span>
+              <h3 id="card-findings-title" class="nc-title">Key Findings</h3>
+            </div>
+            <div class="nc-body-wrap">
+              <p id="card-findings-body" class="nc-body"></p>
+            </div>
+          </article>
 
-      </div><!-- /.summary-grid -->
+          <!-- Node 04 — Limitations -->
+          <article class="node-card node-card--limits" id="card-limits"
+                   role="listitem" aria-labelledby="card-limits-title">
+            <div class="nc-header">
+              <span class="nc-num" aria-hidden="true">04</span>
+              <h3 id="card-limits-title" class="nc-title">Limitations</h3>
+            </div>
+            <div class="nc-body-wrap">
+              <p id="card-limits-body" class="nc-body"></p>
+            </div>
+          </article>
+
+        </div><!-- /.node-grid -->
+      </div><!-- /.node-diagram -->
     </section><!-- /#results-section -->
+
+
+    <!-- ── UPLOAD ZONE (hero on initial load → strip at bottom with results) ── -->
+    <div class="upload-zone" id="upload-zone">
+
+      <!-- Hero copy — hidden in strip mode -->
+      <div class="upload-hero-copy" id="upload-hero-copy">
+        <h1 class="hero-title">
+          Understand Any Paper<br/>
+          <span class="text-accent">In Seconds</span>
+        </h1>
+        <p class="hero-sub">
+          Upload a research paper PDF and receive a precise, structured
+          breakdown — problem, methodology, findings, and limitations —
+          distilled by advanced language intelligence.
+        </p>
+      </div>
+
+      <!-- Upload Card -->
+      <div class="upload-card" id="upload-card">
+
+        <!-- Hidden file input (outside drop-zone so it stays accessible in strip mode) -->
+        <input
+          id="file-input"
+          type="file"
+          accept=".pdf,application/pdf"
+          class="sr-only"
+          aria-hidden="true"
+          tabindex="-1"
+        />
+
+        <!-- Drop Zone (hidden in strip mode) -->
+        <div
+          id="drop-zone"
+          class="drop-zone"
+          role="button"
+          tabindex="0"
+          aria-label="Click or drag and drop a PDF file here"
+          aria-describedby="drop-zone-hint"
+        >
+          <div class="dz-inner">
+            <div class="dz-icon" aria-hidden="true">
+              <svg width="46" height="46" viewBox="0 0 46 46" fill="none">
+                <rect width="46" height="46" rx="13" fill="#BA1200"/>
+                <path d="M23 31V17M23 17l-6 6M23 17l6 6" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="13" y="33" width="20" height="2.5" rx="1.25" fill="white" opacity=".55"/>
+              </svg>
+            </div>
+            <p class="dz-primary">Drag &amp; drop your PDF here</p>
+            <p class="dz-secondary" id="drop-zone-hint">or click to browse</p>
+            <p class="dz-hint">PDF only · Max 10 MB</p>
+          </div>
+        </div>
+
+        <!-- Strip-mode compact PDF picker button (hidden in hero mode) -->
+        <label for="file-input" class="strip-pick" id="strip-pick" aria-label="Choose a different PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 3v5h5M9 13h6M9 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Change PDF
+        </label>
+
+        <!-- File Info Row -->
+        <div id="file-info" class="file-info" hidden aria-live="polite">
+          <svg class="fi-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" stroke="#9DD1F1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 3v5h5M9 13h6M9 17h4" stroke="#9DD1F1" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="fi-text">
+            <span id="file-name" class="fi-name"></span>
+            <span id="file-size" class="fi-size"></span>
+          </div>
+          <button id="clear-file-btn" class="fi-clear" aria-label="Remove file" title="Remove file">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Error Banner -->
+        <div id="error-banner" class="error-banner" hidden role="alert" aria-live="assertive">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" flex-shrink="0">
+            <circle cx="12" cy="12" r="9" stroke="#BA1200" stroke-width="2"/>
+            <path d="M12 8v5M12 16.5h.01" stroke="#BA1200" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span id="error-message"></span>
+          <button id="dismiss-error-btn" class="fi-clear" aria-label="Dismiss error">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Summarise Button -->
+        <button id="summarise-btn" class="btn-summarise" disabled aria-disabled="true">
+          <span id="btn-label">Summarise Paper</span>
+          <!-- 3-D cube spinner (Uiverse bociKond) -->
+          <span id="btn-spinner" class="spinner3d" hidden aria-hidden="true" aria-label="Processing…">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </span>
+        </button>
+
+      </div><!-- /.upload-card -->
+    </div><!-- /.upload-zone -->
 
   </main>
 
   <!-- ░░ FOOTER ░░ -->
   <footer class="site-footer" role="contentinfo">
-    <p>
-      B.Tech CSE Mini-Project &mdash; AI-Powered Text Summarizer for Research Papers
-      &nbsp;·&nbsp;
-      <span class="footer-tech">FastAPI · pypdf · LLaMA 3.1 · Groq</span>
-    </p>
+    <p>ResearchLens &nbsp;·&nbsp; <span class="footer-tech">Intelligent Document Analysis</span></p>
   </footer>
 
-  <!-- Toast Notification -->
+  <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script src="app.js"></script>

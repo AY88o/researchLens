@@ -6,7 +6,9 @@
  *  - Drag-and-drop + click-to-upload file handling
  *  - File validation (type, size) on the client side
  *  - POST /api/summarize via Fetch API with FormData
- *  - Populating the four summary cards from the JSON response
+ *  - Populating the four summary node cards from the JSON response
+ *  - Drawing animated SVG arrows between node cards
+ *  - Upload-zone transitions to bottom strip when results appear
  *  - "Copy Markdown" and "Download .txt" utility actions
  *  - Toast notification system
  */
@@ -14,9 +16,9 @@
 "use strict";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const API_BASE        = "";            // Empty string = same origin (port 8000)
-const MAX_FILE_BYTES  = 10 * 1024 * 1024;  // 10 MB — mirrors backend limit
-const HEALTH_INTERVAL = 30_000;        // Re-check health every 30 s
+const API_BASE        = "";               // same origin
+const MAX_FILE_BYTES  = 10 * 1024 * 1024; // 10 MB
+const HEALTH_INTERVAL = 30_000;           // 30 s
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 const dropZone       = document.getElementById("drop-zone");
@@ -40,9 +42,11 @@ const metaMode       = document.getElementById("meta-mode");
 const copyBtn        = document.getElementById("copy-btn");
 const downloadBtn    = document.getElementById("download-btn");
 const newUploadBtn   = document.getElementById("new-upload-btn");
+const nodeSvg        = document.getElementById("node-svg");
+const nodeGrid       = document.getElementById("node-grid");
 const toast          = document.getElementById("toast");
 
-// Card body elements
+// Card body elements — IDs match the HTML
 const cardBodies = {
   core_problem : document.getElementById("card-problem-body"),
   methodology  : document.getElementById("card-method-body"),
@@ -51,26 +55,26 @@ const cardBodies = {
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let selectedFile   = null;
-let lastSummaryData = null;  // SummaryResponse from the API
+let selectedFile    = null;
+let lastSummaryData = null;
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
-/** Format bytes to a human-readable string like "2.4 MB". */
+/** Format bytes → human-readable string. */
 function formatBytes(bytes) {
-  if (bytes < 1024)       return `${bytes} B`;
+  if (bytes < 1024)        return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-/** Show a brief toast message that auto-dismisses. */
-function showToast(message, durationMs = 2800) {
+/** Brief toast that auto-dismisses. */
+function showToast(message, ms = 2800) {
   toast.textContent = message;
   toast.classList.add("toast--visible");
-  setTimeout(() => toast.classList.remove("toast--visible"), durationMs);
+  setTimeout(() => toast.classList.remove("toast--visible"), ms);
 }
 
-/** Show the error banner with the given message. */
+/** Show the error banner. */
 function showError(message) {
   errorMessage.textContent = message;
   errorBanner.hidden = false;
@@ -82,12 +86,12 @@ function clearError() {
   errorMessage.textContent = "";
 }
 
-/** Set the Summarise button into loading or idle state. */
+/** Toggle loading state on the summarise button. */
 function setLoading(isLoading) {
-  summariseBtn.disabled  = isLoading || !selectedFile;
+  summariseBtn.disabled = isLoading || !selectedFile;
   summariseBtn.setAttribute("aria-disabled", String(isLoading || !selectedFile));
-  btnLabel.textContent   = isLoading ? "Analysing…" : "Summarise Paper";
-  btnSpinner.hidden      = !isLoading;
+  btnLabel.textContent = isLoading ? "Analysing…" : "Summarise Paper";
+  btnSpinner.hidden    = !isLoading;
 }
 
 // ── File Handling ─────────────────────────────────────────────────────────────
@@ -95,36 +99,26 @@ function setLoading(isLoading) {
 function handleFile(file) {
   clearError();
 
-  // Client-side validation
   if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
-    showError("Only PDF files are supported. Please select a .pdf file.");
+    showError("Only PDF files are accepted. Please select a .pdf file.");
     return;
   }
-
   if (file.size > MAX_FILE_BYTES) {
-    showError(`File is too large (${formatBytes(file.size)}). Maximum allowed size is 10 MB.`);
+    showError(`File too large (${formatBytes(file.size)}). Maximum is 10 MB.`);
     return;
   }
-
   if (file.size === 0) {
-    showError("The selected file is empty.");
+    showError("The selected file appears to be empty.");
     return;
   }
 
   selectedFile = file;
-
-  // Show file info strip
   fileNameEl.textContent = file.name;
   fileSizeEl.textContent = formatBytes(file.size);
   fileInfo.hidden = false;
 
-  // Enable action button
   summariseBtn.disabled = false;
   summariseBtn.removeAttribute("aria-disabled");
-
-  // Hide any previous results
-  resultsSection.hidden = true;
-  lastSummaryData = null;
 }
 
 function clearFile() {
@@ -150,9 +144,7 @@ dropZone.addEventListener("keydown", (e) => {
 });
 
 fileInput.addEventListener("change", () => {
-  if (fileInput.files.length > 0) {
-    handleFile(fileInput.files[0]);
-  }
+  if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
 });
 
 dropZone.addEventListener("dragenter", (e) => {
@@ -167,20 +159,13 @@ dropZone.addEventListener("dragover", (e) => {
 });
 
 dropZone.addEventListener("dragleave", (e) => {
-  // Only remove class when leaving the zone itself (not a child element)
-  if (!dropZone.contains(e.relatedTarget)) {
-    dropZone.classList.remove("drag-over");
-  }
+  if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove("drag-over");
 });
 
 dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
   dropZone.classList.remove("drag-over");
-
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    handleFile(files[0]);
-  }
+  if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
 });
 
 clearFileBtn.addEventListener("click", clearFile);
@@ -203,7 +188,6 @@ async function checkHealth() {
   }
 }
 
-// Run immediately, then on a timer.
 checkHealth();
 setInterval(checkHealth, HEALTH_INTERVAL);
 
@@ -227,21 +211,16 @@ async function doSummarise() {
     const data = await resp.json();
 
     if (!resp.ok) {
-      // FastAPI returns { "detail": "..." } for 4xx / 5xx errors.
       const detail = data.detail || `Server error (HTTP ${resp.status})`;
       showError(detail);
       return;
     }
 
-    // Success — render results.
     renderResults(data);
 
   } catch (err) {
-    showError(
-      "Could not connect to the API server. " +
-      "Make sure the backend is running on http://127.0.0.1:8000."
-    );
-    console.error("Summarise fetch error:", err);
+    showError("Unable to reach the analysis server. Ensure the backend is running.");
+    console.error("Summarise error:", err);
   } finally {
     setLoading(false);
   }
@@ -254,32 +233,148 @@ summariseBtn.addEventListener("click", doSummarise);
 function renderResults(data) {
   lastSummaryData = data;
 
-  // Meta pills
+  // Populate meta pills
   metaFilename.textContent = `📄 ${data.filename}`;
   metaPages.textContent    = `${data.pages} page${data.pages !== 1 ? "s" : ""}`;
   metaTime.textContent     = `⏱ ${data.processing_time_s.toFixed(2)} s`;
 
-  // Determine if we got a real LLM response or a mock.
-  // The backend doesn't explicitly flag this, so we infer from timing: real
-  // LLM calls take > ~1 s, mocks are instant.  We add a soft heuristic.
   const isMock = data.processing_time_s < 0.5;
-  if (isMock) {
-    metaMode.className    = "pill pill--mode-mock";
-    metaMode.textContent  = "⚠ Demo Mode (mock)";
-  } else {
-    metaMode.className    = "pill pill--mode-live";
-    metaMode.textContent  = "✓ Live LLM";
-  }
+  metaMode.className   = isMock ? "rpill rpill--mode-mock" : "rpill rpill--mode-live";
+  metaMode.textContent = isMock ? "⚠ Demo Mode" : "✓ Live";
 
-  // Populate the four summary cards
+  // Populate node card bodies
   cardBodies.core_problem.textContent = data.summary.core_problem;
   cardBodies.methodology.textContent  = data.summary.methodology;
   cardBodies.key_findings.textContent = data.summary.key_findings;
   cardBodies.limitations.textContent  = data.summary.limitations;
 
-  // Reveal results section
+  // Show results section — CSS flex handles layout shift
   resultsSection.hidden = false;
-  resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // Transition upload zone to bottom strip
+  document.body.classList.add("has-results");
+
+  // Draw animated node arrows after layout settles
+  requestAnimationFrame(() => requestAnimationFrame(drawNodeArrows));
+}
+
+// ── Node Arrow Drawing ────────────────────────────────────────────────────────
+/**
+ * Draws animated bezier-curve arrows between the four node cards in the SVG
+ * overlay. Called after results are rendered and DOM has laid out.
+ *
+ * Flow:
+ *   Core Problem (01) ──→ Methodology   (02)
+ *        │                     │
+ *        ↓                     ↓
+ *   Key Findings (03) ──→ Limitations  (04)
+ */
+function drawNodeArrows() {
+  if (!nodeSvg || !nodeGrid) return;
+
+  nodeSvg.innerHTML = ""; // clear previous
+
+  const gridRect = nodeGrid.getBoundingClientRect();
+  if (gridRect.width === 0) return; // not yet laid out
+
+  // viewBox matches grid's pixel dimensions
+  nodeSvg.setAttribute("viewBox", `0 0 ${gridRect.width} ${gridRect.height}`);
+
+  /** Returns card edges relative to nodeGrid's top-left. */
+  function rel(el) {
+    const r = el.getBoundingClientRect();
+    return {
+      top   : r.top    - gridRect.top,
+      left  : r.left   - gridRect.left,
+      right : r.right  - gridRect.left,
+      bottom: r.bottom - gridRect.top,
+      cx    : (r.left  + r.right)  / 2 - gridRect.left,
+      cy    : (r.top   + r.bottom) / 2 - gridRect.top,
+    };
+  }
+
+  const p = rel(document.getElementById("card-problem"));
+  const m = rel(document.getElementById("card-method"));
+  const f = rel(document.getElementById("card-findings"));
+  const l = rel(document.getElementById("card-limits"));
+
+  // ── SVG defs: two arrowhead markers ──────────────────────────
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <marker id="ah-air" markerWidth="9" markerHeight="7"
+            refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#508AA8" />
+    </marker>
+    <marker id="ah-baby" markerWidth="9" markerHeight="7"
+            refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#9DD1F1" />
+    </marker>
+  `;
+  nodeSvg.appendChild(defs);
+
+  // Connection definitions
+  // Each: { x1, y1, x2, y2, dir:'h'|'v', color, markerId }
+  const GAP = 6; // px buffer so arrow doesn't overlap card border
+  const connections = [
+    // Core Problem → Methodology  (horizontal, top row)
+    {
+      x1: p.right + GAP, y1: p.cy,
+      x2: m.left  - GAP, y2: m.cy,
+      dir: "h", color: "#508AA8", marker: "ah-air",
+    },
+    // Core Problem → Key Findings (vertical, left col)
+    {
+      x1: p.cx, y1: p.bottom + GAP,
+      x2: f.cx, y2: f.top    - GAP,
+      dir: "v", color: "#9DD1F1", marker: "ah-baby",
+    },
+    // Methodology → Limitations   (vertical, right col)
+    {
+      x1: m.cx, y1: m.bottom + GAP,
+      x2: l.cx, y2: l.top    - GAP,
+      dir: "v", color: "#508AA8", marker: "ah-air",
+    },
+    // Key Findings → Limitations  (horizontal, bottom row)
+    {
+      x1: f.right + GAP, y1: f.cy,
+      x2: l.left  - GAP, y2: l.cy,
+      dir: "h", color: "#9DD1F1", marker: "ah-baby",
+    },
+  ];
+
+  connections.forEach((c, i) => {
+    const mx = (c.x1 + c.x2) / 2;
+    const my = (c.y1 + c.y2) / 2;
+
+    // Cubic bezier — curves gently through the gap
+    const d = c.dir === "h"
+      ? `M ${c.x1} ${c.y1} C ${mx} ${c.y1}, ${mx} ${c.y2}, ${c.x2} ${c.y2}`
+      : `M ${c.x1} ${c.y1} C ${c.x1} ${my}, ${c.x2} ${my}, ${c.x2} ${c.y2}`;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("stroke", c.color);
+    path.setAttribute("stroke-width", "1.6");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("marker-end", `url(#${c.marker})`);
+    path.setAttribute("opacity", "0.65");
+    path.classList.add("node-path");
+
+    // Append first so getTotalLength() is available
+    nodeSvg.appendChild(path);
+
+    // Draw-on animation via stroke-dasharray/offset
+    const len = path.getTotalLength();
+    path.style.strokeDasharray  = len;
+    path.style.strokeDashoffset = len;
+    path.style.transition = `stroke-dashoffset 0.55s cubic-bezier(0.16,1,0.3,1) ${0.35 + i * 0.18}s,
+                              opacity 0.3s ease ${0.35 + i * 0.18}s`;
+    // Trigger the transition on next frame
+    requestAnimationFrame(() => {
+      path.style.strokeDashoffset = "0";
+    });
+  });
 }
 
 // ── New Upload ────────────────────────────────────────────────────────────────
@@ -288,7 +383,17 @@ newUploadBtn.addEventListener("click", () => {
   clearFile();
   resultsSection.hidden = true;
   lastSummaryData = null;
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  document.body.classList.remove("has-results");
+
+  // Wipe arrows
+  if (nodeSvg) nodeSvg.innerHTML = "";
+
+  // Clear card bodies
+  Object.values(cardBodies).forEach(el => { el.textContent = ""; });
+  metaFilename.textContent = "";
+  metaPages.textContent    = "";
+  metaTime.textContent     = "";
+  metaMode.textContent     = "";
 });
 
 // ── Copy Markdown ─────────────────────────────────────────────────────────────
@@ -296,42 +401,41 @@ newUploadBtn.addEventListener("click", () => {
 function buildMarkdown(data) {
   const s = data.summary;
   return [
-    `# Summary: ${data.filename}`,
+    `# ResearchLens Analysis: ${data.filename}`,
     ``,
     `**Pages:** ${data.pages} | **Processing time:** ${data.processing_time_s.toFixed(2)} s`,
     ``,
     `---`,
     ``,
-    `## 🔍 Core Problem`,
+    `## 01 — Core Problem`,
     ``,
     s.core_problem,
     ``,
-    `## ⚙ Methodology`,
+    `## 02 — Methodology`,
     ``,
     s.methodology,
     ``,
-    `## ✨ Key Findings`,
+    `## 03 — Key Findings`,
     ``,
     s.key_findings,
     ``,
-    `## ⚑ Limitations`,
+    `## 04 — Limitations`,
     ``,
     s.limitations,
     ``,
     `---`,
-    `*Generated by ResearchLens AI Paper Summarizer*`,
+    `*Generated by ResearchLens*`,
   ].join("\n");
 }
 
 copyBtn.addEventListener("click", async () => {
   if (!lastSummaryData) return;
-
   const md = buildMarkdown(lastSummaryData);
   try {
     await navigator.clipboard.writeText(md);
-    showToast("✓ Copied to clipboard!");
+    showToast("✓ Copied to clipboard");
   } catch {
-    // Clipboard API not available in non-secure context — fallback.
+    // Fallback for non-secure contexts
     const ta = document.createElement("textarea");
     ta.value = md;
     ta.style.cssText = "position:fixed;opacity:0;";
@@ -339,7 +443,7 @@ copyBtn.addEventListener("click", async () => {
     ta.select();
     document.execCommand("copy");
     document.body.removeChild(ta);
-    showToast("✓ Copied to clipboard!");
+    showToast("✓ Copied to clipboard");
   }
 });
 
@@ -348,20 +452,15 @@ copyBtn.addEventListener("click", async () => {
 downloadBtn.addEventListener("click", () => {
   if (!lastSummaryData) return;
 
-  const content = buildMarkdown(lastSummaryData);
-  const blob    = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url     = URL.createObjectURL(blob);
-
-  // Derive a sensible filename from the original PDF name.
+  const content  = buildMarkdown(lastSummaryData);
+  const blob     = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url      = URL.createObjectURL(blob);
   const baseName = lastSummaryData.filename.replace(/\.pdf$/i, "");
-  const outName  = `${baseName}_summary.txt`;
+  const outName  = `${baseName}_analysis.txt`;
 
   const anchor = document.createElement("a");
-  anchor.href     = url;
-  anchor.download = outName;
-  anchor.click();
+  anchor.href = url; anchor.download = outName; anchor.click();
 
-  // Clean up the object URL after a short delay.
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   showToast(`↓ Downloading "${outName}"`);
 });
